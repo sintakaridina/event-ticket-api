@@ -1,9 +1,5 @@
 # Panduan Kontribusi
 
-Terima kasih telah mempertimbangkan untuk berkontribusi pada proyek Trae! Berikut adalah panduan untuk membantu Anda berkontribusi.
-
-## Proses Kontribusi
-
 1. Fork repositori ini
 2. Clone fork Anda ke mesin lokal Anda
 3. Buat branch fitur baru (`git checkout -b feature/amazing-feature`)
