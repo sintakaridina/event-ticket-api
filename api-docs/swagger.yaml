@@ -1,0 +1,608 @@
+openapi: 3.0.0
+info:
+  title: Trae API
+  description: API for Ticket Reservation and Event System
+  version: 1.0.0
+  contact:
+    name: Trae Team
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication operations
+  - name: Users
+    description: User management operations
+  - name: Events
+    description: Event management operations
+  - name: Tickets
+    description: Ticket management operations
+  - name: Payments
+    description: Payment processing operations
+  - name: Notifications
+    description: Notification management operations
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users/me:
+    get:
+      tags:
+        - Users
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/events:
+    get:
+      tags:
+        - Events
+      summary: List all events
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+    post:
+      tags:
+        - Events
+      summary: Create a new event
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+      responses:
+        '201':
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/events/{eventId}:
+    get:
+      tags:
+        - Events
+      summary: Get event by ID
+      parameters:
+        - name: eventId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventResponse'
+        '404':
+          description: Event not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/tickets:
+    post:
+      tags:
+        - Tickets
+      summary: Book a ticket
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+      responses:
+        '201':
+          description: Ticket booked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/tickets/user:
+    get:
+      tags:
+        - Tickets
+      summary: Get user tickets
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of user tickets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TicketResponse'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/payments:
+    post:
+      tags:
+        - Payments
+      summary: Process payment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '201':
+          description: Payment processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/notifications:
+    post:
+      tags:
+        - Notifications
+      summary: Send notification
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+      responses:
+        '201':
+          description: Notification sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        name:
+          type: string
+        phone:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserResponse'
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [user, admin]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    EventRequest:
+      type: object
+      required:
+        - name
+        - description
+        - venue
+        - date
+        - price
+        - total_tickets
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        venue:
+          type: string
+        date:
+          type: string
+          format: date-time
+        price:
+          type: number
+          format: float
+        total_tickets:
+          type: integer
+        image_url:
+          type: string
+          format: uri
+
+    EventResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        venue:
+          type: string
+        date:
+          type: string
+          format: date-time
+        price:
+          type: number
+          format: float
+        total_tickets:
+          type: integer
+        available_tickets:
+          type: integer
+        image_url:
+          type: string
+          format: uri
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TicketRequest:
+      type: object
+      required:
+        - event_id
+        - quantity
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+
+    TicketResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        event:
+          $ref: '#/components/schemas/EventResponse'
+        user_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+        total_price:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [reserved, paid, cancelled]
+        payment_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PaymentRequest:
+      type: object
+      required:
+        - ticket_id
+        - payment_method
+      properties:
+        ticket_id:
+          type: string
+          format: uuid
+        payment_method:
+          type: string
+          enum: [credit_card, bank_transfer, e_wallet]
+        payment_details:
+          type: object
+          additionalProperties: true
+
+    PaymentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticket_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: float
+        payment_method:
+          type: string
+          enum: [credit_card, bank_transfer, e_wallet]
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        transaction_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    NotificationRequest:
+      type: object
+      required:
+        - user_id
+        - type
+        - subject
+        - content
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [email, sms, push]
+        subject:
+          type: string
+        content:
+          type: string
+        template_id:
+          type: string
+          format: uuid
+        template_data:
+          type: object
+          additionalProperties: true
+
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [email, sms, push]
+        subject:
+          type: string
+        content:
+          type: string
+        status:
+          type: string
+          enum: [pending, sent, failed]
+        sent_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        pages:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        status_code:
+          type: integer

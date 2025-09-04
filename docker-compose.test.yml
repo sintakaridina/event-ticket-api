@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for testing
+  postgres-test:
+    image: postgres:14-alpine
+    container_name: trae-postgres-test
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_MULTIPLE_DATABASES: user_service_test,event_ticket_service_test,payment_service_test,notification_service_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./scripts/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
+    networks:
+      - trae-network-test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker for testing
+  rabbitmq-test:
+    image: rabbitmq:3.11-management-alpine
+    container_name: trae-rabbitmq-test
+    ports:
+      - "5673:5672"   # AMQP protocol port
+      - "15673:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - trae-network-test
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Run tests for all services
+  test-runner:
+    image: golang:1.21-alpine
+    container_name: trae-test-runner
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: >
+      sh -c "cd user-service && go test ./... -v && \
+             cd ../event-ticket-service && go test ./... -v && \
+             cd ../payment-service && go test ./... -v && \
+             cd ../notification-service && go test ./... -v && \
+             cd ../api-gateway && go test ./... -v"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      rabbitmq-test:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres-test
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq-test
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      TEST_ENV: "true"
+    networks:
+      - trae-network-test
+
+networks:
+  trae-network-test:
+    driver: bridge

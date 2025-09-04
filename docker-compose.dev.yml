@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: trae-postgres-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_MULTIPLE_DATABASES: user_service,event_ticket_service,payment_service,notification_service
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./scripts/create-multiple-postgresql-databases.sh:/docker-entrypoint-initdb.d/create-multiple-postgresql-databases.sh
+    networks:
+      - trae-network-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.11-management-alpine
+    container_name: trae-rabbitmq-dev
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI port
+      - "15692:15692" # Prometheus metrics port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data_dev:/var/lib/rabbitmq
+    networks:
+      - trae-network-dev
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:v2.40.7
+    container_name: trae-prometheus-dev
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data_dev:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - trae-network-dev
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:9.3.6
+    container_name: trae-grafana-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data_dev:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+    networks:
+      - trae-network-dev
+
+  # Swagger UI for API documentation
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: trae-swagger-ui-dev
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./api-docs:/usr/share/nginx/html/api-docs
+    environment:
+      - SWAGGER_JSON=/usr/share/nginx/html/api-docs/swagger.yaml
+    networks:
+      - trae-network-dev
+
+networks:
+  trae-network-dev:
+    driver: bridge
+
+volumes:
+  postgres_data_dev:
+  rabbitmq_data_dev:
+  prometheus_data_dev:
+  grafana_data_dev:
