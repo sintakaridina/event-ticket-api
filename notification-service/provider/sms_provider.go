@@ -1,7 +1,10 @@
 package provider
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -36,13 +39,43 @@ func (p *TwilioSMSProvider) SendSMS(to, message string) error {
 		return err
 	}
 
-	// In a real implementation, this would use the Twilio API to send an SMS
-	// For now, we'll just log the message
-	logrus.Infof("[TWILIO] SMS sent to %s: %s", to, message)
+	// Prepare the API URL
+	apiURL := fmt.Sprintf("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", p.accountSID)
 
-	// TODO: Implement actual Twilio API call
-	// Example implementation would use a Twilio client library
+	// Prepare form data
+	data := url.Values{}
+	data.Set("From", p.fromNumber)
+	data.Set("To", to)
+	data.Set("Body", message)
 
+	// Create HTTP request
+	req, err := http.NewRequest("POST", apiURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(p.accountSID, p.authToken)
+
+	// Send request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send SMS: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check response status
+	if resp.StatusCode >= 400 {
+		var errorResp map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&errorResp); err != nil {
+			return fmt.Errorf("SMS failed with status %d", resp.StatusCode)
+		}
+		return fmt.Errorf("SMS failed: %v", errorResp)
+	}
+
+	logrus.Infof("[TWILIO] SMS sent successfully to %s", to)
 	return nil
 }
 
