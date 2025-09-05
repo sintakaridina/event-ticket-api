@@ -94,8 +94,21 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
+	// Convert userID to UUID
+	userIDStr, ok := userID.(string)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	userUUID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
 	// Call service to get user by ID
-	user, err := h.userService.GetUserByID(userID.(uuid.UUID))
+	user, err := h.userService.GetUserByID(userUUID)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to get user profile")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
